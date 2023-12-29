@@ -3,9 +3,11 @@ from tkinter import messagebox
 from random import choice, randrange
 from copy import deepcopy
 import time
+import socket
 
 class TetrisGame:
-    def __init__(self):
+    def __init__(self, conn):
+        self.conn = conn
         self.current_matrix = []
         self.W, self.H = 10, 20
         self.TILE = 45
@@ -50,7 +52,6 @@ class TetrisGame:
         self.score, self.lines = 0, 0
         self.scores = {0: 0, 1: 100, 2: 300, 3: 700, 4: 1500}
         self.record = "0"
-
         self.sc.create_text(505, 30, text="TETRIS", font=("WiGuru 2", 50), fill="red", anchor=NW)
         self.sc.create_text(535, 780, text="score:", font=("WiGuru 2", 35), fill="black", anchor=NW)
         self._score = self.sc.create_text(550, 840, text=str(self.score), font=("WiGuru 2", 35), fill="black", anchor=NW)
@@ -65,6 +66,7 @@ class TetrisGame:
         self.dx, self.rotate = 0, False
 
         self.total_matrix = []
+        self.key = 5
 
     def rgb_to_hex(self, rgb):
         return '#%02x%02x%02x' % rgb
@@ -77,14 +79,16 @@ class TetrisGame:
                 return False
         return True
 
-    def move_obj(self, event):
-        if event.keysym == 'Up':
+    def move_obj(self):
+        localkey = int(self.key)
+        if localkey == 1:
             self.rotate = True
-        elif event.keysym == 'Down':
+        elif localkey == 2:
             self.anim_limit = 100
-        elif event.keysym == 'Left':
+        elif localkey == 3:
+            print('dqsadqwdqd')
             self.dx = -1
-        elif event.keysym == 'Right':
+        elif localkey == 4:
             self.dx = 1
 
     def on_closing(self):
@@ -110,11 +114,7 @@ class TetrisGame:
             if self.app_running:
                 self.current_matrix = [[0 for i in range(self.W)] for j in range(self.H)]
                 self.record = self.get_record()
-
-                self.tk.bind("<Up>", lambda event: self.move_obj(event))
-                self.tk.bind("<Down>", lambda event: self.move_obj(event))
-                self.tk.bind("<Left>", lambda event: self.move_obj(event))
-                self.tk.bind("<Right>", lambda event: self.move_obj(event))
+                self.move_obj()
 
                 # move x
                 figure_old = deepcopy(self.figure)
@@ -161,10 +161,15 @@ class TetrisGame:
 
                 # Display the matrix in the console
                 if self.current_matrix != self.total_matrix:
-                    print("Matrix")
+                    matrix_str = ' '
                     for row in self.current_matrix:
-                        row = " ".join(map(lambda x: str(1 if x else 0), row))
-                        print(row)
+                        row_str = " ".join(map(lambda x: str(1 if x else 0), row))
+                        matrix_str += row_str + "\n"
+                    matrix_str = matrix_str.strip()
+                    data = matrix_str + ';' + str(self.score) + ';' + '0'
+                    msg = bytes(data, encoding='utf-8')
+                    conn.send(msg)
+                    self.key = conn.recv(1024).decode()
 
                 self.total_matrix = self.current_matrix
 
@@ -243,6 +248,11 @@ class TetrisGame:
                 time.sleep(0.005)
 
 if __name__ == "__main__":
-    game = TetrisGame()
+    port = 11000
+    sock = socket.socket()
+    sock.bind(('', port))
+    sock.listen(1)
+    conn, addr = sock.accept()
+    game = TetrisGame(conn)
     game.run()
 
