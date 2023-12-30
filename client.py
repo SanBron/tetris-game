@@ -3,7 +3,7 @@ import random
 import time
 import socket
 import keyboard
-import datetime
+
 class MatrixDrawer:
     def __init__(self, master, matrix, max_score, score):
         self.master = master
@@ -98,7 +98,7 @@ def start_game_screen():
 
     return game_started
 
-def endgame(root, score, maxscore, current_datetime):
+def endgame(root, score, maxscore):
     for widget in root.winfo_children():
         widget.destroy()
     root.title("Game Over")
@@ -109,9 +109,6 @@ def endgame(root, score, maxscore, current_datetime):
     label_max_score = tk.Label(root, text=f"Max Score: {maxscore}")
     label_max_score.pack()
 
-    label_datetime = tk.Label(root, text=f"Date and Time: {current_datetime}")
-    label_datetime.pack()
-
     def exit_program():
         root.destroy()
 
@@ -121,8 +118,9 @@ def endgame(root, score, maxscore, current_datetime):
     root.mainloop()
 
 if __name__ == "__main__":
-    myIp = '127.0.0.1'
-    port = 11000
+    myIp = '172.20.10.2'
+
+    port = 11012
     sock = socket.socket()
     sock.connect((myIp, port))
     print("Connected")
@@ -137,13 +135,11 @@ if __name__ == "__main__":
     app = MatrixDrawer(root, matrix, max_score, score)
     game_alive = True
 
-    current_datetime = ""
-
     # Start the Tkinter main loop
     while game_alive == True:
         data = sock.recv(1024).decode()
         if data == "101":
-            endgame(root, score, max_score, current_datetime)
+            endgame(root, score, max_score)
             game_alive = False
         else:
             matrix, score, max_score = recv_splitter(data)
@@ -151,15 +147,9 @@ if __name__ == "__main__":
             print(matrix)
             app.set_matrix(matrix, score, max_score)
 
-            current_datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
             # Обновление главного окна Tkinter
             root.update_idletasks()
             root.update()
             sended = check_arrow_key_pressed()
             sock.send(bytes(sended, encoding='utf-8'))
-
-
-
-
 
